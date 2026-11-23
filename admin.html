@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Administrativo | CETPRO N.° 014</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>body { font-family: 'Inter', sans-serif; }</style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl p-8 border border-slate-200">
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 bg-blue-900 text-white rounded-2xl flex items-center justify-center text-2xl font-black mx-auto mb-3 shadow-md">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                <h2 class="text-xl font-bold text-slate-900">Panel Administrativo</h2>
+                <p class="text-xs text-slate-500 mt-1">CETPRO N.° 014 "José Olaya Balandra"</p>
+            </div>
+
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Correo Institucional</label>
+                    <input type="email" id="loginEmail" required value="cetprojob@gmail.com" class="w-full px-4 py-2.5 rounded-lg border text-sm focus:ring-2 focus:ring-blue-900 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Contraseña</label>
+                    <input type="password" id="password" required placeholder="••••••••" class="w-full px-4 py-2.5 rounded-lg border text-sm focus:ring-2 focus:ring-blue-900 outline-none">
+                </div>
+                <p id="loginError" class="text-xs text-red-600 hidden"></p>
+                <button type="submit" id="btnLogin" class="w-full py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow transition-all">
+                    Iniciar Sesión
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+    <div id="adminDashboard" class="hidden flex-grow flex flex-col">
+        <header class="bg-blue-950 text-white shadow-md border-b border-blue-900">
+            <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-900 rounded-lg flex items-center justify-center font-bold">014</div>
+                    <div>
+                        <h1 class="text-sm font-bold">Gestión de Matrículas - CETPRO</h1>
+                        <p class="text-[11px] text-blue-300" id="userEmailSession">Sesión activa</p>
+                    </div>
+                </div>
+                <!-- SELECTOR DE PERIODO ACADÉMICO -->
+                <div class="flex items-center gap-2 bg-blue-900/60 p-2 rounded-xl border border-blue-800 text-xs">
+                    <span class="font-bold text-blue-200"><i class="fa-solid fa-calendar-days mr-1"></i> Periodo:</span>
+                    <select id="selectPeriodo" onchange="cambiarFiltroPeriodo()" class="bg-blue-950 text-white px-3 py-1.5 rounded-lg border border-blue-700 outline-none font-medium">
+                        <option value="todos">📅 Visualizar todos los periodos</option>
+                    </select>
+                </div>
+                <button onclick="handleLogout()" class="bg-red-600/80 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
+                </button>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 py-8 flex-grow w-full space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-5">
+                <div class="bg-white p-6 rounded-2xl border shadow-sm flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-users"></i></div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-bold uppercase">Total Inscritos</p>
+                        <h3 class="text-2xl font-black text-slate-900" id="statTotal">0</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border shadow-sm flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-clock"></i></div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-bold uppercase">Pendientes</p>
+                        <h3 class="text-2xl font-black text-slate-900" id="statPendientes">0</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border shadow-sm flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-check"></i></div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-bold uppercase">Aprobados</p>
+                        <h3 class="text-2xl font-black text-slate-900" id="statAprobados">0</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border shadow-sm flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-ban"></i></div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-bold uppercase">Rechazados</p>
+                        <h3 class="text-2xl font-black text-slate-900" id="statRechazados">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+                <div class="p-5 border-b flex flex-col sm:flex-row justify-between gap-4 items-center">
+                    <div class="flex items-center gap-3">
+                        <h3 class="font-bold text-slate-900">Listado de Postulantes</h3>
+                        <span id="badgePeriodoActual" class="text-[10px] bg-blue-100 text-blue-800 font-bold px-2.5 py-1 rounded-full uppercase">Periodo Activo</span>
+                    </div>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <input type="text" id="searchInput" oninput="filtrarTabla()" placeholder="Buscar por DNI o nombre..." class="px-4 py-2 border rounded-lg text-xs w-full sm:w-64 outline-none focus:ring-2 focus:ring-blue-900">
+                        <button onclick="cargarDatosGenerales()" title="Recargar lista" class="bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-lg text-xs font-bold text-slate-700">
+                            <i class="fa-solid fa-rotate"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 uppercase border-b">
+                                <th class="p-4">Fecha</th>
+                                <th class="p-4">Postulante</th>
+                                <th class="p-4">DNI</th>
+                                <th class="p-4">Programa</th>
+                                <th class="p-4">Periodo</th>
+                                <th class="p-4">Celular</th>
+                                <th class="p-4">Voucher</th>
+                                <th class="p-4">Estado</th>
+                                <th class="p-4 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaMatriculas" class="divide-y divide-slate-100">
+                            <tr><td colspan="9" class="p-6 text-center text-slate-400">Cargando registros...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- SCRIPT DE CONTROL -->
+    <script>
+        const SUPABASE_URL = 'https://fyfsxojxheicrpmhqlac.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ5ZnN4b2p4aGVpY3JwbWhxbGFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4MjQ1ODMsImV4cCI6MjEwODQwMDU4M30.ooBVnAfLBpMfftySJt4S_wXtxloNX4wZJTS9KBIGz2g';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let todasLasMatriculas = [];
+        let listaPeriodos = [];
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                mostrarDashboard(session.user.email);
+            }
+        });
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('password').value;
+            const errorEl = document.getElementById('loginError');
+            const btn = document.getElementById('btnLogin');
+
+            btn.disabled = true;
+            btn.innerHTML = 'Verificando...';
+            errorEl.classList.add('hidden');
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                errorEl.textContent = 'Correo o contraseña incorrectos.';
+                errorEl.classList.remove('hidden');
+                btn.disabled = false;
+                btn.innerHTML = 'Iniciar Sesión';
+            } else {
+                mostrarDashboard(data.user.email);
+            }
+        }
+
+        async function handleLogout() {
+            await supabaseClient.auth.signOut();
+            document.getElementById('adminDashboard').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('password').value = '';
+        }
+
+        function mostrarDashboard(email) {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('adminDashboard').classList.remove('hidden');
+            document.getElementById('userEmailSession').textContent = email;
+            cargarDatosGenerales();
+        }
+
+        async function cargarDatosGenerales() {
+            // 1. Cargar periodos
+            const { data: periodos, error: errP } = await supabaseClient
+                .from('periodos')
+                .select('*')
+                .order('anio', { ascending: false });
+
+            if (errP) {
+                console.error('Error cargando periodos:', errP);
+                return;
+            }
+
+            listaPeriodos = periodos || [];
+            poblarSelectorPeriodos();
+
+            // 2. Cargar matrículas incluyendo la información del periodo relacionado
+            const { data: matriculas, error: errM } = await supabaseClient
+                .from('matriculas')
+                .select('*, periodos(nombre, anio, etapa)')
+                .order('created_at', { ascending: false });
+
+            if (errM) {
+                console.error('Error cargando matrículas:', errM);
+                alert('Error al cargar registros: ' + errM.message);
+                return;
+            }
+
+            todasLasMatriculas = matriculas || [];
+            filtrarTabla();
+        }
+
+        function poblarSelectorPeriodos() {
+            const select = document.getElementById('selectPeriodo');
+            const periodoActivo = listaPeriodos.find(p => p.activo);
+            
+            let opcionesHTML = `<option value="todos">📅 Visualizar todos los periodos</option>`;
+            
+            listaPeriodos.forEach(p => {
+                const etiquetaActivo = p.activo ? ' (ACTIVO)' : '';
+                opcionesHTML += `<option value="${p.id}" ${p.activo && select.value === 'todos' ? '' : ''}>${p.nombre}${etiquetaActivo}</option>`;
+            });
+
+            select.innerHTML = opcionesHTML;
+
+            // Si es la primera carga y no hay selección previa, seleccionamos por defecto el periodo activo
+            if (select.value === 'todos' && periodoActivo) {
+                // Buscamos si el usuario ya tenía uno seleccionado, si no, dejamos el activo por defecto
+                const matchActivo = listaPeriodos.find(p => p.activo);
+                if (matchActivo) select.value = matchActivo.id;
+            }
+        }
+
+        function cambiarFiltroPeriodo() {
+            filtrarTabla();
+        }
+
+        function filtrarTabla() {
+            const periodoSeleccionado = document.getElementById('selectPeriodo').value;
+            const textoBusqueda = document.getElementById('searchInput').value.toLowerCase();
+
+            // Filtrar por periodo
+            let filtrados = todasLasMatriculas.filter(m => {
+                if (periodoSeleccionado === 'todos') return true;
+                return m.periodo_id == periodoSeleccionado;
+            });
+
+            // Filtrar por texto (DNI o nombre)
+            if (textoBusqueda) {
+                filtrados = filtrados.filter(m => 
+                    (m.nombre_completo && m.nombre_completo.toLowerCase().includes(textoBusqueda)) || 
+                    (m.dni && m.dni.includes(textoBusqueda))
+                );
+            }
+
+            renderizarTabla(filtrados);
+            actualizarEstadisticas(filtrados);
+        }
+
+        function renderizarTabla(lista) {
+            const tbody = document.getElementById('tablaMatriculas');
+            if (lista.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-400">No hay inscripciones registradas en este periodo.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = lista.map(m => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-4 text-slate-500">${new Date(m.created_at).toLocaleDateString()}</td>
+                    <td class="p-4 font-bold text-slate-900">${m.nombre_completo || 'Sin nombre'}</td>
+                    <td class="p-4 font-mono">${m.dni || '-'}</td>
+                    <td class="p-4 text-slate-600">${m.programa || '-'}</td>
+                    <td class="p-4"><span class="bg-slate-100 text-slate-700 font-semibold px-2 py-1 rounded text-[11px]">${m.periodos ? m.periodos.nombre : 'S/P'}</span></td>
+                    <td class="p-4">${m.celular || '-'}</td>
+                    <td class="p-4">
+                        ${m.voucher_url ? `<a href="${m.voucher_url}" target="_blank" class="text-blue-600 font-bold underline"><i class="fa-solid fa-file-image mr-1"></i> Ver</a>` : '<span class="text-slate-400">Sin voucher</span>'}
+                    </td>
+                    <td class="p-4">
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
+                            m.estado_aprobado === 'aprobado' ? 'bg-emerald-100 text-emerald-800' :
+                            m.estado_aprobado === 'rechazado' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'
+                        }">
+                            ${m.estado_aprobado || 'pendiente'}
+                        </span>
+                    </td>
+                    <td class="p-4 text-center space-x-1 whitespace-nowrap">
+                        <button onclick="cambiarEstado(${m.id}, 'aprobado')" title="Aprobar matrícula" class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition"><i class="fa-solid fa-check"></i></button>
+                        <button onclick="cambiarEstado(${m.id}, 'rechazado')" title="Rechazar matrícula" class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white transition"><i class="fa-solid fa-xmark"></i></button>
+                        <button onclick="enviarCorreoNotificacion('${(m.correo || '')}', '${(m.nombre_completo || '').replace(/'/g, "\\'")}', '${(m.programa || '').replace(/'/g, "\\'")}', '${m.estado_aprobado || 'pendiente'}')" title="✉️ Notificar por Correo" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition"><i class="fa-solid fa-envelope"></i></button>
+                        <button onclick="eliminarRegistro(${m.id}, '${m.estado_aprobado || 'pendiente'}', '${(m.nombre_completo || '').replace(/'/g, "\\'")}')" title="Eliminar registro" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function actualizarEstadisticas(lista) {
+            document.getElementById('statTotal').textContent = lista.length;
+            document.getElementById('statPendientes').textContent = lista.filter(m => !m.estado_aprobado || m.estado_aprobado === 'pendiente').length;
+            document.getElementById('statAprobados').textContent = lista.filter(m => m.estado_aprobado === 'aprobado').length;
+            document.getElementById('statRechazados').textContent = lista.filter(m => m.estado_aprobado === 'rechazado').length;
+        }
+
+        async function cambiarEstado(id, nuevoEstado) {
+            const { error } = await supabaseClient
+                .from('matriculas')
+                .update({ estado_aprobado: nuevoEstado })
+                .eq('id', id);
+
+            if (error) {
+                alert('Error al actualizar el estado: ' + error.message);
+                console.error(error);
+            } else {
+                cargarDatosGenerales();
+            }
+        }
+
+        function enviarCorreoNotificacion(correoEstudiante, nombreEstudiante, nombrePrograma, estadoActual) {
+            if (!correoEstudiante || !correoEstudiante.includes('@')) {
+                alert('El estudiante no cuenta con un correo electrónico válido registrado.');
+                return;
+            }
+
+            const asunto = encodeURIComponent(`Resultado de postulación - CETPRO N.° 014 José Olaya Balandra`);
+            
+            let cuerpoTexto = `Estimado(a) ${nombreEstudiante},\n\n` +
+                `Nos dirigimos a usted desde el CETPRO N.° 014 "José Olaya Balandra" de La Cruz, Tumbes.\n\n` +
+                `Le informamos que su solicitud de preinscripción para el programa "${nombrePrograma}" se encuentra actualmente en estado: ${estadoActual.toUpperCase()}.\n\n`;
+
+            if (estadoActual === 'aprobado') {
+                cuerpoTexto += `¡Felicitaciones! Su documentación ha sido verificada. Por favor, acérquese a la institución en las fechas establecidas para formalizar su matrícula.\n\n`;
+            } else if (estadoActual === 'rechazado') {
+                cuerpoTexto += `Lamentamos informarle que su preinscripción no ha podido ser aprobada en esta oportunidad debido a la disponibilidad de vacantes o validación de requisitos.\n\n`;
+            } else {
+                cuerpoTexto += `Su expediente se encuentra en proceso de revisión por parte del comité de admisiones.\n\n`;
+            }
+
+            cuerpoTexto += `Para cualquier consulta comuníquese al teléfono 979232321.\n\n` +
+                `Atentamente,\n` +
+                `Oficina de Admisiones - CETPRO N.° 014`;
+
+            const cuerpo = encodeURIComponent(cuerpoTexto);
+            const urlGmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${correoEstudiante}&su=${asunto}&body=${cuerpo}`;
+            window.open(urlGmail, '_blank');
+        }
+
+        async function eliminarRegistro(id, estado, nombre) {
+            if (estado === 'aprobado') {
+                const confirmarAprobado = confirm(`⚠️ ATENCIÓN: "${nombre}" ya tiene su matrícula APROBADA.\n\nPor política institucional se recomienda conservar los registros aprobados. ¿Estás seguro de que deseas eliminarlo definitivamente?`);
+                if (!confirmarAprobado) return;
+            } else {
+                const confirmar = confirm(`¿Seguro que deseas eliminar la solicitud de "${nombre}"? Esta acción no se puede deshacer.`);
+                if (!confirmar) return;
+            }
+
+            const { error } = await supabaseClient
+                .from('matriculas')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                alert('No se pudo eliminar el registro: ' + error.message);
+                console.error(error);
+            } else {
+                cargarDatosGenerales();
+            }
+        }
+    </script>
+</body>
+</html>
