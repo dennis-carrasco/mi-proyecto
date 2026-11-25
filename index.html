@@ -50,13 +50,13 @@ section[id]{scroll-margin-top:6rem}
    <a class="nav-link hover:text-mar" href="#contacto">Contacto</a>
   </nav>
   <div class="flex items-center gap-2">
-   <button onclick="abrirModal()" class="btn hidden sm:inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-mar bg-sol rounded-lg hover:bg-amber-400">Inscribirme <i class="fa-solid fa-user-plus"></i></button>
-   <button id="menuBtn" class="lg:hidden w-11 h-11 rounded-lg border border-slate-200 text-mar" aria-label="Abrir menú" aria-controls="mobileMenu" aria-expanded="false"><i id="menuIco" class="fa-solid fa-bars" aria-hidden="true"></i></button>
+   <button type="button" onclick="abrirModal()" class="btn hidden sm:inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-mar bg-sol rounded-lg hover:bg-amber-400">Inscribirme <i class="fa-solid fa-user-plus"></i></button>
+   <button type="button" id="menuBtn" class="lg:hidden w-11 h-11 rounded-lg border border-slate-200 text-mar" aria-label="Abrir menú" aria-controls="mobileMenu" aria-expanded="false"><i id="menuIco" class="fa-solid fa-bars" aria-hidden="true"></i></button>
   </div>
  </div>
  <nav id="mobileMenu" hidden class="lg:hidden border-t border-slate-200 bg-white px-4 py-4 flex flex-col gap-1 font-semibold" aria-label="Móvil">
   <a class="py-3" href="#inicio">Inicio</a><a class="py-3" href="#programas">Programas</a><a class="py-3" href="#proceso">Cómo inscribirte</a><a class="py-3" href="#beneficios">Misión y visión</a><a class="py-3" href="#contacto">Contacto</a>
-  <button onclick="abrirModal()" class="btn mt-2 py-3 bg-sol text-mar font-bold rounded-lg">Inscribirme ahora</button>
+  <button type="button" onclick="abrirModal()" class="btn mt-2 py-3 bg-sol text-mar font-bold rounded-lg">Inscribirme ahora</button>
  </nav>
 </header>
 
@@ -69,7 +69,7 @@ section[id]{scroll-margin-top:6rem}
   <h1 class="font-display font-extrabold text-4xl sm:text-5xl lg:text-7xl leading-[1.05] max-w-4xl">Aprende un oficio con certificación oficial y entra al mundo laboral.</h1>
   <p class="mt-6 text-lg text-blue-100 max-w-2xl">Educación técnico-productiva modular y práctica, bajo los estándares del Ministerio de Educación. Pre-inscríbete desde tu celular.</p>
   <div class="mt-9 flex flex-col sm:flex-row gap-3">
-   <button onclick="abrirModal()" class="btn px-8 py-4 bg-sol text-mar font-bold rounded-lg hover:bg-amber-400">Pre-inscribirme ahora</button>
+   <button type="button" onclick="abrirModal()" class="btn px-8 py-4 bg-sol text-mar font-bold rounded-lg hover:bg-amber-400">Pre-inscribirme ahora</button>
    <a href="#programas" class="btn px-8 py-4 text-center border border-white/40 font-bold rounded-lg hover:bg-white/10">Ver los 7 programas</a>
   </div>
   <div class="mt-14 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl text-sm">
@@ -141,12 +141,12 @@ section[id]{scroll-margin-top:6rem}
  &copy; 2026 CETPRO N.° 014 “José Olaya Balandra” - Desarrollado por Dennis Denilson Carrasco Marchan (IG: @dennis_14_16)
 </footer>
 
-<button id="fabInscribir" onclick="abrirModal()" class="btn sm:hidden fixed bottom-4 right-4 z-30 px-5 py-3 bg-sol text-mar font-bold rounded-full shadow-xl"><i class="fa-solid fa-user-plus mr-2"></i>Inscribirme</button>
+<button type="button" id="fabInscribir" onclick="abrirModal()" class="btn sm:hidden fixed bottom-4 right-4 z-30 px-5 py-3 bg-sol text-mar font-bold rounded-full shadow-xl"><i class="fa-solid fa-user-plus mr-2"></i>Inscribirme</button>
 
 <!-- MODAL -->
 <div id="modalInscripcion" class="fixed inset-0 z-50 hidden overflow-y-auto bg-slate-900/60 backdrop-blur-sm items-start sm:items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="tituloModal" aria-describedby="descModal">
  <div class="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 sm:p-8 relative my-4">
-  <button onclick="cerrarModal()" class="absolute top-4 right-4 w-10 h-10 text-slate-400 hover:text-slate-700" aria-label="Cerrar"><i class="fa-solid fa-xmark text-lg"></i></button>
+  <button type="button" onclick="cerrarModal()" class="absolute top-4 right-4 w-10 h-10 text-slate-400 hover:text-slate-700" aria-label="Cerrar"><i class="fa-solid fa-xmark text-lg"></i></button>
   <span class="px-3 py-1 rounded-full bg-ola/10 text-ola text-xs font-semibold">Ficha única de registro</span>
   <h2 id="tituloModal" class="font-display font-bold text-2xl text-mar mt-2">Solicitud de preinscripción 2026</h2>
   <p id="descModal" class="text-sm text-slate-500 mb-5">Ingresa tus datos personales oficiales para solicitar tu matrícula en el CETPRO N.° 014.</p>
@@ -203,14 +203,14 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const CONFIG = {
  BUCKET: 'vouchers',
  MAX_BYTES: 5 * 1024 * 1024,
- VOUCHER_BUCKET_PRIVADO: false
+ VOUCHER_BUCKET_PRIVADO: true
 };
 let supabaseClient = null;
 try { supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }
 catch (err) { console.error('No se pudo iniciar Supabase:', err); }
 
 const $ = id => document.getElementById(id);
-const esc = s => s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
 /* ===== Catálogo único ===== */
 const PROGRAMAS = [
@@ -422,7 +422,7 @@ async function procesarFormulario(e){
  enviando = true;
  const btn = $('btnEnviar'); btn.disabled = true;
  btn.innerHTML = '<i class="fas fa-spinner animate-spin" aria-hidden="true"></i> Enviando...';
- let ok = false, subido = false;
+ let ok = false;
  try {
   // 1. Obtener el periodo activo automáticamente antes de registrar
   const { data: periodoActivo, error: errorPeriodo } = await supabaseClient
@@ -441,7 +441,6 @@ async function procesarFormulario(e){
    const problema = await validarArchivo(file);
    if (problema) { $('inputVoucher').setAttribute('aria-invalid', 'true'); mostrarEstado(problema, false); enviando = false; btn.disabled = false; btn.innerHTML = HTML_BTN; return; }
    voucherUrl = refVoucher(await subirVoucher(file, d.dni));
-   subido = true;
   }
 
   // 2. Insertar la matrícula vinculada al periodo_id activo
@@ -450,21 +449,44 @@ async function procesarFormulario(e){
    grado: d.grado, programa: d.programa, pago_opcional: d.pago, voucher_url: voucherUrl, estado_aprobado: 'pendiente',
    periodo_id: periodoActivo.id
   }]);
+
   if (error) throw error;
-  ok = true; voucherSubido = null;
-  mostrarEstado('¡Solicitud enviada con éxito! Nos comunicaremos contigo pronto a tu correo.', true);
-  $('formMatricula').reset(); alternarVoucher();
-  setTimeout(cerrarModal, 3500);
+  ok = true;
+  mostrarEstado('¡Listo! Tu solicitud de preinscripción fue registrada como pendiente.', true);
+  $('formMatricula').reset();
+  alternarVoucher();
+  voucherSubido = null;
  } catch (err) {
   console.error(err);
-  mostrarEstado(mensajeError(err), false);
+  const msgPropio = err && err.message && err.message.startsWith('No hay un periodo académico activo')
+   ? err.message
+   : mensajeError(err);
+  mostrarEstado(msgPropio, false);
  } finally {
   enviando = false;
   btn.disabled = false;
   btn.innerHTML = HTML_BTN;
+  if (ok) {
+   setTimeout(() => cerrarModal(), 1500);
+  }
  }
 }
+
 $('formMatricula').addEventListener('submit', procesarFormulario);
 </script>
+
+<!--Start of Tawk.to Script-->
+<script type="text/javascript">
+var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+(function(){
+var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+s1.async=true;
+s1.src='https://embed.tawk.to/6b050c3a52d49d3cf6857236/1k85rfh2b';
+s1.charset='UTF-8';
+s1.setAttribute('crossorigin','*');
+s0.parentNode.insertBefore(s1,s0);
+})();
+</script>
+<!--End of Tawk.to Script-->
 </body>
 </html>

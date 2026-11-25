@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
     <title>Panel Administrativo | CETPRO N.° 014</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -26,11 +27,11 @@
             <form onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Correo Institucional</label>
-                    <input type="email" id="loginEmail" required value="cetprojob@gmail.com" class="w-full px-4 py-2.5 rounded-lg border text-sm focus:ring-2 focus:ring-blue-900 outline-none">
+                    <input type="email" id="loginEmail" required autocomplete="username" placeholder="correo@institucion.edu.pe" class="w-full px-4 py-2.5 rounded-lg border text-sm focus:ring-2 focus:ring-blue-900 outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Contraseña</label>
-                    <input type="password" id="password" required placeholder="••••••••" class="w-full px-4 py-2.5 rounded-lg border text-sm focus:ring-2 focus:ring-blue-900 outline-none">
+                    <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••" class="w-full px-4 py-2.5 rounded-lg border text-sm focus:ring-2 focus:ring-blue-900 outline-none">
                 </div>
                 <p id="loginError" class="text-xs text-red-600 hidden"></p>
                 <button type="submit" id="btnLogin" class="w-full py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow transition-all">
@@ -58,7 +59,7 @@
                         <option value="todos">📅 Visualizar todos los periodos</option>
                     </select>
                 </div>
-                <button onclick="handleLogout()" class="bg-red-600/80 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2">
+                <button type="button" onclick="handleLogout()" class="bg-red-600/80 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2">
                     <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
                 </button>
             </div>
@@ -104,7 +105,7 @@
                     </div>
                     <div class="flex gap-2 w-full sm:w-auto">
                         <input type="text" id="searchInput" oninput="filtrarTabla()" placeholder="Buscar por DNI o nombre..." class="px-4 py-2 border rounded-lg text-xs w-full sm:w-64 outline-none focus:ring-2 focus:ring-blue-900">
-                        <button onclick="cargarDatosGenerales()" title="Recargar lista" class="bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-lg text-xs font-bold text-slate-700">
+                        <button type="button" onclick="cargarDatosGenerales()" title="Recargar lista" class="bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-lg text-xs font-bold text-slate-700">
                             <i class="fa-solid fa-rotate"></i>
                         </button>
                     </div>
@@ -142,17 +143,44 @@
 
         let todasLasMatriculas = [];
         let listaPeriodos = [];
+        let filtroInicialAplicado = false;
+
+        function esc(valor) {
+            return String(valor ?? '').replace(/[&<>"']/g, m => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[m]));
+        }
+
+        function resetearBotonLogin() {
+            const btn = document.getElementById('btnLogin');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = 'Iniciar Sesión';
+            }
+        }
 
         window.addEventListener('DOMContentLoaded', async () => {
             const { data: { session } } = await supabaseClient.auth.getSession();
-            if (session) {
+            if (session?.user) {
                 mostrarDashboard(session.user.email);
             }
+
+            supabaseClient.auth.onAuthStateChange((_event, newSession) => {
+                if (newSession?.user) {
+                    mostrarDashboard(newSession.user.email);
+                } else {
+                    ocultarDashboard();
+                }
+            });
         });
 
         async function handleLogin(e) {
             e.preventDefault();
-            const email = document.getElementById('loginEmail').value;
+            const email = document.getElementById('loginEmail').value.trim();
             const password = document.getElementById('password').value;
             const errorEl = document.getElementById('loginError');
             const btn = document.getElementById('btnLogin');
@@ -163,11 +191,10 @@
 
             const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
-            if (error) {
+            if (error || !data?.user) {
                 errorEl.textContent = 'Correo o contraseña incorrectos.';
                 errorEl.classList.remove('hidden');
-                btn.disabled = false;
-                btn.innerHTML = 'Iniciar Sesión';
+                resetearBotonLogin();
             } else {
                 mostrarDashboard(data.user.email);
             }
@@ -175,20 +202,27 @@
 
         async function handleLogout() {
             await supabaseClient.auth.signOut();
+            ocultarDashboard();
+        }
+
+        function ocultarDashboard() {
+            filtroInicialAplicado = false;
+            todasLasMatriculas = [];
+            resetearBotonLogin();
             document.getElementById('adminDashboard').classList.add('hidden');
             document.getElementById('loginScreen').classList.remove('hidden');
             document.getElementById('password').value = '';
         }
 
         function mostrarDashboard(email) {
+            resetearBotonLogin();
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('adminDashboard').classList.remove('hidden');
-            document.getElementById('userEmailSession').textContent = email;
+            document.getElementById('userEmailSession').textContent = email || 'Sesión activa';
             cargarDatosGenerales();
         }
 
         async function cargarDatosGenerales() {
-            // 1. Cargar periodos
             const { data: periodos, error: errP } = await supabaseClient
                 .from('periodos')
                 .select('*')
@@ -202,7 +236,6 @@
             listaPeriodos = periodos || [];
             poblarSelectorPeriodos();
 
-            // 2. Cargar matrículas incluyendo la información del periodo relacionado
             const { data: matriculas, error: errM } = await supabaseClient
                 .from('matriculas')
                 .select('*, periodos(nombre, anio, etapa)')
@@ -220,22 +253,40 @@
 
         function poblarSelectorPeriodos() {
             const select = document.getElementById('selectPeriodo');
+            const seleccionPrevia = select.value;
             const periodoActivo = listaPeriodos.find(p => p.activo);
-            
+
             let opcionesHTML = `<option value="todos">📅 Visualizar todos los periodos</option>`;
-            
+
             listaPeriodos.forEach(p => {
                 const etiquetaActivo = p.activo ? ' (ACTIVO)' : '';
-                opcionesHTML += `<option value="${p.id}" ${p.activo && select.value === 'todos' ? '' : ''}>${p.nombre}${etiquetaActivo}</option>`;
+                opcionesHTML += `<option value="${esc(p.id)}">${esc(p.nombre)}${esc(etiquetaActivo)}</option>`;
             });
 
             select.innerHTML = opcionesHTML;
 
-            // Si es la primera carga y no hay selección previa, seleccionamos por defecto el periodo activo
-            if (select.value === 'todos' && periodoActivo) {
-                // Buscamos si el usuario ya tenía uno seleccionado, si no, dejamos el activo por defecto
-                const matchActivo = listaPeriodos.find(p => p.activo);
-                if (matchActivo) select.value = matchActivo.id;
+            if (!filtroInicialAplicado) {
+                filtroInicialAplicado = true;
+                if (periodoActivo) {
+                    select.value = String(periodoActivo.id);
+                } else {
+                    select.value = 'todos';
+                }
+            } else if (seleccionPrevia && [...select.options].some(opt => opt.value === seleccionPrevia)) {
+                select.value = seleccionPrevia;
+            }
+        }
+
+        function actualizarBadgePeriodo() {
+            const select = document.getElementById('selectPeriodo');
+            const badge = document.getElementById('badgePeriodoActual');
+            if (!select || !badge) return;
+
+            if (select.value === 'todos') {
+                badge.textContent = 'Todos los periodos';
+            } else {
+                const textoOpcion = select.options[select.selectedIndex]?.text || 'Periodo seleccionado';
+                badge.textContent = textoOpcion.replace(' (ACTIVO)', '');
             }
         }
 
@@ -244,25 +295,63 @@
         }
 
         function filtrarTabla() {
-            const periodoSeleccionado = document.getElementById('selectPeriodo').value;
-            const textoBusqueda = document.getElementById('searchInput').value.toLowerCase();
+            actualizarBadgePeriodo();
 
-            // Filtrar por periodo
+            const periodoSeleccionado = document.getElementById('selectPeriodo').value;
+            const textoBusqueda = document.getElementById('searchInput').value.trim().toLowerCase();
+
             let filtrados = todasLasMatriculas.filter(m => {
                 if (periodoSeleccionado === 'todos') return true;
-                return m.periodo_id == periodoSeleccionado;
+                return String(m.periodo_id) === String(periodoSeleccionado);
             });
 
-            // Filtrar por texto (DNI o nombre)
             if (textoBusqueda) {
-                filtrados = filtrados.filter(m => 
-                    (m.nombre_completo && m.nombre_completo.toLowerCase().includes(textoBusqueda)) || 
-                    (m.dni && m.dni.includes(textoBusqueda))
+                filtrados = filtrados.filter(m =>
+                    (m.nombre_completo && m.nombre_completo.toLowerCase().includes(textoBusqueda)) ||
+                    (m.dni && String(m.dni).toLowerCase().includes(textoBusqueda))
                 );
             }
 
             renderizarTabla(filtrados);
             actualizarEstadisticas(filtrados);
+        }
+
+        async function abrirVoucher(voucherValor) {
+            const raw = String(voucherValor ?? '').trim();
+            if (!raw) {
+                alert('Comprobante no disponible.');
+                return;
+            }
+
+            let rutaArchivo = '';
+
+            if (/^https:\/\//i.test(raw)) {
+                const marcador = '/vouchers/';
+                const idx = raw.indexOf(marcador);
+                if (idx === -1) {
+                    window.open(raw, '_blank', 'noopener,noreferrer');
+                    return;
+                }
+                rutaArchivo = decodeURIComponent(raw.slice(idx + marcador.length).split('?')[0]);
+            } else if (!raw.startsWith('http://') && !raw.startsWith('javascript:')) {
+                rutaArchivo = raw.replace(/^\/+/, '');
+            } else {
+                alert('Enlace de comprobante no válido.');
+                return;
+            }
+
+            const { data, error } = await supabaseClient
+                .storage
+                .from('vouchers')
+                .createSignedUrl(rutaArchivo, 60);
+
+            if (error || !data?.signedUrl) {
+                alert('No se pudo generar el enlace seguro del comprobante.');
+                console.error(error);
+                return;
+            }
+
+            window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
         }
 
         function renderizarTabla(lista) {
@@ -272,33 +361,47 @@
                 return;
             }
 
-            tbody.innerHTML = lista.map(m => `
-                <tr class="hover:bg-slate-50 transition">
-                    <td class="p-4 text-slate-500">${new Date(m.created_at).toLocaleDateString()}</td>
-                    <td class="p-4 font-bold text-slate-900">${m.nombre_completo || 'Sin nombre'}</td>
-                    <td class="p-4 font-mono">${m.dni || '-'}</td>
-                    <td class="p-4 text-slate-600">${m.programa || '-'}</td>
-                    <td class="p-4"><span class="bg-slate-100 text-slate-700 font-semibold px-2 py-1 rounded text-[11px]">${m.periodos ? m.periodos.nombre : 'S/P'}</span></td>
-                    <td class="p-4">${m.celular || '-'}</td>
-                    <td class="p-4">
-                        ${m.voucher_url ? `<a href="${m.voucher_url}" target="_blank" class="text-blue-600 font-bold underline"><i class="fa-solid fa-file-image mr-1"></i> Ver</a>` : '<span class="text-slate-400">Sin voucher</span>'}
-                    </td>
-                    <td class="p-4">
-                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
-                            m.estado_aprobado === 'aprobado' ? 'bg-emerald-100 text-emerald-800' :
-                            m.estado_aprobado === 'rechazado' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'
-                        }">
-                            ${m.estado_aprobado || 'pendiente'}
-                        </span>
-                    </td>
-                    <td class="p-4 text-center space-x-1 whitespace-nowrap">
-                        <button onclick="cambiarEstado(${m.id}, 'aprobado')" title="Aprobar matrícula" class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition"><i class="fa-solid fa-check"></i></button>
-                        <button onclick="cambiarEstado(${m.id}, 'rechazado')" title="Rechazar matrícula" class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white transition"><i class="fa-solid fa-xmark"></i></button>
-                        <button onclick="enviarCorreoNotificacion('${(m.correo || '')}', '${(m.nombre_completo || '').replace(/'/g, "\\'")}', '${(m.programa || '').replace(/'/g, "\\'")}', '${m.estado_aprobado || 'pendiente'}')" title="✉️ Notificar por Correo" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition"><i class="fa-solid fa-envelope"></i></button>
-                        <button onclick="eliminarRegistro(${m.id}, '${m.estado_aprobado || 'pendiente'}', '${(m.nombre_completo || '').replace(/'/g, "\\'")}')" title="Eliminar registro" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition"><i class="fa-solid fa-trash"></i></button>
-                    </td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = lista.map(m => {
+                const estado = ['aprobado', 'rechazado', 'pendiente'].includes(m.estado_aprobado)
+                    ? m.estado_aprobado
+                    : 'pendiente';
+                const claseEstado = estado === 'aprobado'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : estado === 'rechazado'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-amber-100 text-amber-800';
+
+                const fechaTexto = m.created_at ? esc(new Date(m.created_at).toLocaleDateString()) : '-';
+                const idSeguro = JSON.stringify(String(m.id ?? ''));
+                const voucherSeguro = JSON.stringify(String(m.voucher_url ?? ''));
+
+                return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-4 text-slate-500">${fechaTexto}</td>
+                        <td class="p-4 font-bold text-slate-900">${esc(m.nombre_completo || 'Sin nombre')}</td>
+                        <td class="p-4 font-mono">${esc(m.dni || '-')}</td>
+                        <td class="p-4 text-slate-600">${esc(m.programa || '-')}</td>
+                        <td class="p-4"><span class="bg-slate-100 text-slate-700 font-semibold px-2 py-1 rounded text-[11px]">${esc(m.periodos ? m.periodos.nombre : 'S/P')}</span></td>
+                        <td class="p-4">${esc(m.celular || '-')}</td>
+                        <td class="p-4">
+                            ${m.voucher_url
+                                ? `<button type="button" onclick='abrirVoucher(${voucherSeguro})' class="text-blue-600 font-bold underline"><i class="fa-solid fa-file-image mr-1"></i> Ver</button>`
+                                : '<span class="text-slate-400">Sin voucher</span>'}
+                        </td>
+                        <td class="p-4">
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${claseEstado}">
+                                ${esc(estado)}
+                            </span>
+                        </td>
+                        <td class="p-4 text-center space-x-1 whitespace-nowrap">
+                            <button type="button" onclick='cambiarEstado(${idSeguro}, "aprobado")' title="Aprobar matrícula" class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition"><i class="fa-solid fa-check"></i></button>
+                            <button type="button" onclick='cambiarEstado(${idSeguro}, "rechazado")' title="Rechazar matrícula" class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white transition"><i class="fa-solid fa-xmark"></i></button>
+                            <button type="button" onclick='prepararCorreoPorId(${idSeguro})' title="✉️ Notificar por Correo" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition"><i class="fa-solid fa-envelope"></i></button>
+                            <button type="button" onclick='eliminarRegistroPorId(${idSeguro})' title="Eliminar registro" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         function actualizarEstadisticas(lista) {
@@ -309,6 +412,8 @@
         }
 
         async function cambiarEstado(id, nuevoEstado) {
+            if (!['aprobado', 'rechazado', 'pendiente'].includes(nuevoEstado)) return;
+
             const { error } = await supabaseClient
                 .from('matriculas')
                 .update({ estado_aprobado: nuevoEstado })
@@ -322,17 +427,29 @@
             }
         }
 
+        function prepararCorreoPorId(id) {
+            const m = todasLasMatriculas.find(item => String(item.id) === String(id));
+            if (!m) return;
+            enviarCorreoNotificacion(
+                m.correo || '',
+                m.nombre_completo || 'Postulante',
+                m.programa || 'el programa seleccionado',
+                m.estado_aprobado || 'pendiente'
+            );
+        }
+
         function enviarCorreoNotificacion(correoEstudiante, nombreEstudiante, nombrePrograma, estadoActual) {
-            if (!correoEstudiante || !correoEstudiante.includes('@')) {
+            const correoLimpio = String(correoEstudiante ?? '').trim();
+            if (!correoLimpio || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoLimpio)) {
                 alert('El estudiante no cuenta con un correo electrónico válido registrado.');
                 return;
             }
 
-            const asunto = encodeURIComponent(`Resultado de postulación - CETPRO N.° 014 José Olaya Balandra`);
-            
+            const asunto = encodeURIComponent('Resultado de postulación - CETPRO N.° 014 José Olaya Balandra');
+
             let cuerpoTexto = `Estimado(a) ${nombreEstudiante},\n\n` +
                 `Nos dirigimos a usted desde el CETPRO N.° 014 "José Olaya Balandra" de La Cruz, Tumbes.\n\n` +
-                `Le informamos que su solicitud de preinscripción para el programa "${nombrePrograma}" se encuentra actualmente en estado: ${estadoActual.toUpperCase()}.\n\n`;
+                `Le informamos que su solicitud de preinscripción para el programa "${nombrePrograma}" se encuentra actualmente en estado: ${String(estadoActual).toUpperCase()}.\n\n`;
 
             if (estadoActual === 'aprobado') {
                 cuerpoTexto += `¡Felicitaciones! Su documentación ha sido verificada. Por favor, acérquese a la institución en las fechas establecidas para formalizar su matrícula.\n\n`;
@@ -347,8 +464,14 @@
                 `Oficina de Admisiones - CETPRO N.° 014`;
 
             const cuerpo = encodeURIComponent(cuerpoTexto);
-            const urlGmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${correoEstudiante}&su=${asunto}&body=${cuerpo}`;
-            window.open(urlGmail, '_blank');
+            const urlGmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(correoLimpio)}&su=${asunto}&body=${cuerpo}`;
+            window.open(urlGmail, '_blank', 'noopener,noreferrer');
+        }
+
+        async function eliminarRegistroPorId(id) {
+            const m = todasLasMatriculas.find(item => String(item.id) === String(id));
+            if (!m) return;
+            await eliminarRegistro(m.id, m.estado_aprobado || 'pendiente', m.nombre_completo || 'este registro');
         }
 
         async function eliminarRegistro(id, estado, nombre) {
